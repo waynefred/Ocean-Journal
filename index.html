@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ocean Journal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Outfit', 'sans-serif'],
+              serif: ['Merriweather', 'serif'],
+            },
+            colors: {
+              ocean: {
+                50: '#f0f9ff',
+                100: '#e0f2fe',
+                200: '#bae6fd',
+                300: '#7dd3fc',
+                400: '#38bdf8',
+                500: '#0ea5e9',
+                600: '#0284c7',
+                700: '#0369a1',
+                800: '#075985',
+                900: '#0c4a6e',
+              }
+            },
+            animation: {
+              'float': 'float 6s ease-in-out infinite',
+            },
+            keyframes: {
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-10px)' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Markdown Styles */
+      .prose h1 { @apply text-3xl font-bold text-ocean-900 mb-4 mt-8; }
+      .prose h2 { @apply text-2xl font-semibold text-ocean-800 mb-3 mt-6; }
+      .prose h3 { @apply text-xl font-medium text-ocean-700 mb-2 mt-4; }
+      .prose p { @apply text-slate-700 leading-relaxed mb-4 text-lg font-serif; }
+      .prose ul { @apply list-disc list-outside ml-6 mb-4 text-slate-700; }
+      .prose ol { @apply list-decimal list-outside ml-6 mb-4 text-slate-700; }
+      .prose blockquote { @apply border-l-4 border-ocean-300 pl-4 italic text-slate-600 my-6; }
+      .prose code { @apply bg-slate-100 text-pink-600 px-1 py-0.5 rounded font-mono text-sm; }
+      .prose pre { @apply bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto mb-6; }
+      .prose img { @apply rounded-lg shadow-md my-6 w-full object-cover max-h-[500px]; }
+      .prose a { @apply text-ocean-600 underline hover:text-ocean-800 transition-colors; }
+
+      /* Custom Animation for Email */
+      @keyframes rainbow {
+        0% { color: #ec4899; }
+        12.5% { color: #3b82f6; }
+        25% { color: #ef4444; }
+        37.5% { color: #8b5cf6; }
+        50% { color: #eab308; }
+        62.5% { color: #000000; }
+        75% { color: #f97316; }
+        87.5% { color: #22c55e; }
+        100% { color: #ec4899; }
+      }
+      .animate-rainbow {
+        animation: rainbow 6s linear infinite;
+      }
+      .animate-rainbow-slow {
+        animation: rainbow 12s linear infinite;
+      }
+    </style>
+  </head>
+  <body class="bg-ocean-50 text-slate-800 antialiased selection:bg-ocean-200 selection:text-ocean-900">
+    <div id="root"></div>
+   <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
