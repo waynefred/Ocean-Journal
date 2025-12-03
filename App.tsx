@@ -1,12 +1,12 @@
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
-import Navbar from './components/Navbar';
-import Home from './pages/Home';
-import ArticleDetail from './pages/ArticleDetail';
-import Dashboard from './pages/Admin/Dashboard';
-import Editor from './pages/Admin/Editor';
-import Login from './pages/Login';
-import { getIsAdmin } from './services/storage';
+import Navbar from './Navbar';
+import Home from './Home';
+import ArticleDetail from './ArticleDetail';
+import Dashboard from './Dashboard';
+import Editor from './Editor';
+import Login from './Login';
+import { getIsAdmin } from './storage';
 
 // Protected Route Wrapper
 interface ProtectedRouteProps {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getArticles, deleteArticle, loadSampleData } from '../../services/storage';
-import { Article } from '../../types';
+import { getArticles, deleteArticle, loadSampleData } from './storage';
+import { Article } from './types';
 import { Edit2, Trash2, Eye, Plus, Download, Copy, Check, Sparkles } from 'lucide-react';
 
 const Dashboard: React.FC = () => {

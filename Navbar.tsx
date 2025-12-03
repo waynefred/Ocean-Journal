@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { BookOpen, LogOut, PenTool, LayoutDashboard } from 'lucide-react';
-import { getIsAdmin, setAdmin } from '../services/storage';
+import { getIsAdmin, setAdmin } from './storage';
 
 const Navbar: React.FC = () => {
   const [isAdmin, setIsAdminState] = React.useState(getIsAdmin());
