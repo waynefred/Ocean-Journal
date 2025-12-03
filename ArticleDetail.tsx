@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Article, Comment } from '../types';
-import { getArticleById, toggleLike, getComments, addComment, getUserId, getIsAdmin, deleteComment } from '../services/storage';
+import { Article, Comment } from './types';
+import { getArticleById, toggleLike, getComments, addComment, getUserId, getIsAdmin, deleteComment } from './storage';
 import { Heart, MessageCircle, Share2, ArrowLeft, Send, Clock, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { getArticles } from '../services/storage';
-import { Article } from '../types';
-import ArticleCard from '../components/ArticleCard';
+import { getArticles } from './storage';
+import { Article } from './types';
+import ArticleCard from './ArticleCard';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getArticleById, saveArticle } from '../../services/storage';
-import { generateExcerpt, improveWriting } from '../../services/gemini';
-import { ArticleFormData } from '../../types';
+import { getArticleById, saveArticle } from './storage';
+import { generateExcerpt, improveWriting } from './gemini';
+import { ArticleFormData } from './types';
 import { Save, ArrowLeft, Wand2, Loader2, Image as ImageIcon, Upload } from 'lucide-react';
 
 const Editor: React.FC = () => {
