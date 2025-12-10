@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Lock, ArrowRight, AlertCircle, XCircle } from 'lucide-react';
-import { setAdmin } from './storage';
+import { setIsAdmin } from '../services/storage';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
@@ -20,7 +20,7 @@ const Login: React.FC = () => {
         // Success
         setError('');
         setWrongAttempts(0);
-        setAdmin(true);
+        setIsAdmin(true);
         navigate('/admin/manage');
       } else {
         // Wrong password
