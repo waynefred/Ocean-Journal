@@ -1,12 +1,13 @@
-import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import Navbar from './Navbar';
 import Home from './Home';
 import ArticleDetail from './ArticleDetail';
 import Dashboard from './Dashboard';
 import Editor from './Editor';
 import Login from './Login';
-import { getIsAdmin } from './storage';
+import { getIsAdmin, getArticles } from './storage';
+import { Article } from './types';
 
 // Protected Route Wrapper
 interface ProtectedRouteProps {
@@ -23,6 +24,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 
 const App: React.FC = () => {
   const isAdmin = getIsAdmin();
+  const [articles, setArticles] = useState<Article[]>([]);
+
+  useEffect(() => {
+    const all = getArticles();
+    const published = all.filter(a => a.status === 'published').sort((a, b) => b.createdAt - a.createdAt);
+    setArticles(published);
+  }, []);
 
   return (
     <Router>
@@ -30,7 +38,7 @@ const App: React.FC = () => {
         <Navbar />
         <main className="flex-1">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Home articles={articles} />} />
             <Route path="/article/:id" element={<ArticleDetail />} />
             <Route path="/login" element={isAdmin ? <Navigate to="/admin/manage" replace /> : <Login />} />
             
