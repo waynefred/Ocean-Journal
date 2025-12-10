@@ -1,27 +1,23 @@
-import React, { useEffect, useState } from 'react';
-import { getArticles } from '../services/storage';
-import { Article } from '../types';
-import ArticleCard from '../components/ArticleCard';
+import React, { useState } from 'react';
+import { Article } from './types';
+import ArticleCard from './ArticleCard';
+import Pagination from './Pagination'; // Import the new component
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const ARTICLES_PER_PAGE = 6;
 
-const Home: React.FC = () => {
-  const [allArticles, setAllArticles] = useState<Article[]>([]);
+interface HomeProps {
+  articles: Article[];
+  isLoading: boolean;
+}
+
+const Home: React.FC<HomeProps> = ({ articles, isLoading }) => {
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
-    // Only show published articles on home
-    const all = getArticles();
-    const published = all.filter(a => a.status === 'published').sort((a, b) => b.createdAt - a.createdAt);
-    setAllArticles(published);
-  }, []);
-
   // Pagination Logic
-  const totalPages = Math.ceil(allArticles.length / ARTICLES_PER_PAGE);
+  const totalPages = Math.ceil(articles.length / ARTICLES_PER_PAGE);
   const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE;
-  const currentArticles = allArticles.slice(startIndex, startIndex + ARTICLES_PER_PAGE);
+  const currentArticles = articles.slice(startIndex, startIndex + ARTICLES_PER_PAGE);
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -49,7 +45,11 @@ const Home: React.FC = () => {
         </p>
       </motion.div>
 
-      {allArticles.length === 0 ? (
+      {isLoading ? (
+        <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-slate-100">
+          <p className="text-slate-500 text-lg animate-pulse">Loading stories...</p>
+        </div>
+      ) : articles.length === 0 ? (
         <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-slate-100">
           <p className="text-slate-400 text-lg">No stories published yet.</p>
         </div>
@@ -61,45 +61,12 @@ const Home: React.FC = () => {
             ))}
           </div>
 
-          {/* Pagination Controls */}
           {totalPages > 1 && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex justify-center items-center gap-4"
-            >
-              <button 
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="p-3 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-ocean-50 hover:text-ocean-600 hover:border-ocean-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              
-              <div className="flex items-center gap-2">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`w-10 h-10 rounded-full font-medium text-sm transition-all ${
-                      currentPage === page 
-                        ? 'bg-ocean-600 text-white shadow-md shadow-ocean-200 scale-110' 
-                        : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-              </div>
-
-              <button 
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="p-3 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-ocean-50 hover:text-ocean-600 hover:border-ocean-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </motion.div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
           )}
         </>
       )}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Calendar } from 'lucide-react';
-import { Article } from '../types';
+import { Article } from './types';
 import { motion } from 'framer-motion';
 
 interface Props {
