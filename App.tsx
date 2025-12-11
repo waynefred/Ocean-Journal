@@ -25,11 +25,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 const App: React.FC = () => {
   const isAdmin = getIsAdmin();
   const [articles, setArticles] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const all = getArticles();
-    const published = all.filter(a => a.status === 'published').sort((a, b) => b.createdAt - a.createdAt);
-    setArticles(published);
+    const fetchArticles = async () => {
+      setLoading(true);
+      try {
+        const allArticles = await getArticles();
+        const published = allArticles.filter(a => a.status === 'published');
+        setArticles(published);
+      } catch (error) {
+        console.error("Failed to fetch articles:", error);
+        // Handle error state in UI if desired
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchArticles();
   }, []);
 
   return (
@@ -38,7 +51,7 @@ const App: React.FC = () => {
         <Navbar />
         <main className="flex-1">
           <Routes>
-            <Route path="/" element={<Home articles={articles} />} />
+            <Route path="/" element={<Home articles={articles} isLoading={loading} />} />
             <Route path="/article/:id" element={<ArticleDetail />} />
             <Route path="/login" element={isAdmin ? <Navigate to="/admin/manage" replace /> : <Login />} />
             
