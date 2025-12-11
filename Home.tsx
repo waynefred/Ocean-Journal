@@ -1,62 +1,79 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { getAllArticles } from '../services/storage';
-import { Article } from '../types';
-import ReactMarkdown from 'react-markdown';
+import React, { useState } from 'react';
+import { Article } from './types';
+import ArticleCard from './ArticleCard';
+import Pagination from './Pagination'; // Import the new component
+import { motion } from 'framer-motion';
 
-const Home: React.FC = () => {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const ARTICLES_PER_PAGE = 6;
 
-  useEffect(() => {
-    const fetchArticles = async () => {
-      try {
-        setLoading(true);
-        const fetchedArticles = await getAllArticles();
-        setArticles(fetchedArticles);
-      } catch (err) {
-        setError('Failed to fetch articles.');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+interface HomeProps {
+  articles: Article[];
+  isLoading: boolean;
+}
 
-    fetchArticles();
-  }, []);
+const Home: React.FC<HomeProps> = ({ articles, isLoading }) => {
+  const [currentPage, setCurrentPage] = useState(1);
 
-  if (loading) {
-    return <div className="container mx-auto px-4 py-8 text-center">Loading articles...</div>;
-  }
+  // Pagination Logic
+  const totalPages = Math.ceil(articles.length / ARTICLES_PER_PAGE);
+  const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE;
+  const currentArticles = articles.slice(startIndex, startIndex + ARTICLES_PER_PAGE);
 
-  if (error) {
-    return <div className="container mx-auto px-4 py-8 text-center text-red-500">{error}</div>;
-  }
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+      // Scroll to top of grid nicely
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold text-ocean-800 mb-8">Latest Articles</h1>
-      {articles.length === 0 ? (
-        <p className="text-slate-600">No articles have been published yet.</p>
-      ) : (
-        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {articles.map((article) => (
-            <div key={article.id} className="bg-white rounded-lg shadow-md overflow-hidden transform hover:-translate-y-2 transition-transform duration-300">
-              <div className="p-6">
-                <h2 className="text-2xl font-semibold text-ocean-700 mb-2 truncate">{article.title}</h2>
-                <p className="text-slate-500 mb-4">{new Date(article.date).toLocaleDate-String()}</p>
-                <div className="text-slate-600 mb-4 h-24 overflow-hidden">
-                  <ReactMarkdown>{article.content.substring(0, 150) + '...'}</ReactMarkdown>
-                </div>
-                <Link to={`/article/${article.id}`} className="font-semibold text-ocean-600 hover:underline">
-                  Read More &rarr;
-                </Link>
-              </div>
-            </div>
-          ))}
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center mb-16"
+      >
+        <span className="inline-block py-1 px-3 rounded-full bg-ocean-100 text-ocean-700 text-xs font-bold tracking-wider mb-4 uppercase">
+          The Journal
+        </span>
+        <h1 className="text-4xl sm:text-5xl font-serif font-bold text-slate-900 mb-6 tracking-tight">
+          Stories from the <span className="text-transparent bg-clip-text bg-gradient-to-r from-ocean-500 to-cyan-400 animate-pulse">Deep</span>
+        </h1>
+        <p className="text-lg animate-rainbow-slow max-w-2xl mx-auto font-medium leading-relaxed">
+          A collection of thoughts, tutorials, and aquatic musings. Dive in to explore minimalism, technology, and the serene mind.
+        </p>
+      </motion.div>
+
+      {isLoading ? (
+        <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-slate-100">
+          <p className="text-slate-500 text-lg animate-pulse">Loading stories...</p>
         </div>
+      ) : articles.length === 0 ? (
+        <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-slate-100">
+          <p className="text-slate-400 text-lg">No stories published yet.</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+            {currentArticles.map((article, idx) => (
+              <ArticleCard key={article.id} article={article} index={idx} />
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          )}
+        </>
       )}
+      
+      {/* Decorative Background Elements */}
+      <div className="fixed top-20 left-0 w-64 h-64 bg-ocean-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -z-10 animate-float"></div>
+      <div className="fixed bottom-20 right-0 w-80 h-80 bg-cyan-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 -z-10 animate-float" style={{ animationDelay: '2s' }}></div>
     </div>
   );
 };
