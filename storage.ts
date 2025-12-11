@@ -111,6 +111,31 @@ export const deleteArticle = async (id: string) => {
   }
 };
 
+// Image Upload
+export const uploadCoverImage = async (file: File): Promise<string> => {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from('cover-images') // This MUST match the bucket name you created
+    .upload(fileName, file);
+
+  if (uploadError) {
+    console.error('Upload error:', uploadError);
+    throw new Error('Could not upload cover image.');
+  }
+
+  const { data } = supabase.storage
+    .from('cover-images')
+    .getPublicUrl(fileName);
+
+  if (!data) {
+    throw new Error('Could not get public URL for the uploaded image.');
+  }
+
+  return data.publicUrl;
+};
+
 // Like System
 export const toggleLike = async (articleId: string): Promise<Article | undefined> => {
   const article = await getArticleById(articleId);

@@ -29,13 +29,8 @@ const ArticleCard: React.FC<Props> = ({ article, index }) => {
       </Link>
       
       <div className="p-6 flex-1 flex flex-col">
-        <div className="flex items-center gap-2 text-xs text-slate-400 mb-3">
-          <Calendar className="w-3 h-3" />
-          {new Date(article.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
-        </div>
-        
         <Link to={`/article/${article.id}`}>
-          <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-ocean-600 transition-colors font-serif leading-tight">
+          <h3 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-ocean-600 transition-colors font-serif leading-tight">
             {article.title}
           </h3>
         </Link>

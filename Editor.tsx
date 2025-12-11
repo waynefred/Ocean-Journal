@@ -1,15 +1,19 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getArticleById, saveArticle } from './storage';
+import { getArticleById, saveArticle, uploadCoverImage } from './storage';
+import { generateExcerpt } from './gemini';
 import { ArticleFormData } from './types';
-import { Save, ArrowLeft, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Image as ImageIcon, Upload, Wand2 } from 'lucide-react';
 
 const Editor: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // For fetching initial data
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [aiLoading, setAiLoading] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<ArticleFormData>({
     title: '',
@@ -21,6 +25,7 @@ const Editor: React.FC = () => {
   });
 
   const [tagInput, setTagInput] = useState('');
+  const [previewMode, setPreviewMode] = useState(false);
 
   const fetchArticle = useCallback(async () => {
     if (!id) {
@@ -41,7 +46,6 @@ const Editor: React.FC = () => {
           status: article.status || 'draft',
         });
       } else {
-        // Handle case where article is not found
         navigate('/admin/manage');
       }
     } catch (error) {
@@ -83,9 +87,42 @@ const Editor: React.FC = () => {
       navigate('/admin/manage');
     } catch (error) {
       console.error("Failed to save article:", error);
-      // Optionally, show an error message to the user
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const publicUrl = await uploadCoverImage(file);
+      handleChange('coverImage', publicUrl);
+    } catch (error) {
+      console.error("Image upload failed:", error);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  // AI Helpers
+  const handleAiExcerpt = async () => {
+    if (!formData.content) return;
+    setAiLoading('excerpt');
+    try {
+      const excerpt = await generateExcerpt(formData.content);
+      if (excerpt) handleChange('excerpt', excerpt);
+    } catch (e) {
+      console.error(e);
+      alert("Could not generate excerpt.");
+    } finally {
+      setAiLoading(null);
     }
   };
 
@@ -117,6 +154,12 @@ const Editor: React.FC = () => {
              <option value="draft">Draft</option>
              <option value="published">Published</option>
            </select>
+           <button
+             onClick={() => setPreviewMode(!previewMode)}
+             className="lg:hidden px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+           >
+             {previewMode ? 'Edit' : 'Preview'}
+           </button>
            <button 
              onClick={handleSave}
              disabled={isSaving}
@@ -128,8 +171,8 @@ const Editor: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 items-start">
-        <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        <div className={`flex flex-col gap-6 ${previewMode ? 'hidden lg:flex' : 'flex'}`}>
            <input 
              type="text" 
              placeholder="Article Title" 
@@ -139,7 +182,7 @@ const Editor: React.FC = () => {
            />
            
            <div className="space-y-4">
-              <div>
+              <div className="relative">
                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Excerpt</label>
                 <textarea 
                   value={formData.excerpt} 
@@ -147,21 +190,49 @@ const Editor: React.FC = () => {
                   placeholder="A short summary..."
                   className="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-600 focus:border-ocean-400 focus:ring-2 focus:ring-ocean-100 outline-none transition-all resize-none h-24"
                 />
+                 <div className="absolute top-8 right-2 flex gap-1">
+                   <button
+                     onClick={handleAiExcerpt}
+                     disabled={!!aiLoading}
+                     title="Generate Excerpt from Content"
+                     className="p-1.5 bg-ocean-50 text-ocean-600 rounded hover:bg-ocean-100 transition-colors"
+                   >
+                      {aiLoading === 'excerpt' ? <Loader2 className="w-4 h-4 animate-spin"/> : <Wand2 className="w-4 h-4"/>}
+                   </button>
+                </div>
               </div>
 
              <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cover Image URL</label>
-                <div className="relative flex-1">
-                  <ImageIcon className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cover Image</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <ImageIcon className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      value={formData.coverImage}
+                      onChange={e => handleChange('coverImage', e.target.value)}
+                      placeholder="Paste URL or upload image"
+                      className="w-full bg-white border border-slate-200 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:border-ocean-400 focus:ring-2 focus:ring-ocean-100 outline-none"
+                    />
+                  </div>
+                  <button
+                    onClick={() => !isUploading && fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition-colors whitespace-nowrap active:scale-95 disabled:opacity-50 disabled:cursor-wait"
+                    title="Upload from PC"
+                  >
+                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    <span className="hidden sm:inline">{isUploading ? 'Uploading...' : 'Upload'}</span>
+                  </button>
                   <input 
-                    type="text"
-                    value={formData.coverImage}
-                    onChange={e => handleChange('coverImage', e.target.value)}
-                    placeholder="Paste a URL for the cover image"
-                    className="w-full bg-white border border-slate-200 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:border-ocean-400 focus:ring-2 focus:ring-ocean-100 outline-none"
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleImageUpload}
                   />
                 </div>
-                <p className="text-xs text-slate-400 mt-1 ml-1">Please use an image hosting service (e.g., Unsplash, Imgur).</p>
+                <p className="text-xs text-slate-400 mt-1 ml-1">Supports image URLs or uploads to Supabase Storage.</p>
              </div>
 
              <div>
@@ -193,6 +264,20 @@ const Editor: React.FC = () => {
                 placeholder="Write your story here..."
                 className="w-full bg-white border border-slate-200 rounded-lg p-6 text-lg font-serif text-slate-700 focus:border-ocean-400 focus:ring-2 focus:ring-ocean-100 outline-none transition-all leading-relaxed min-h-[600px]"
               />
+           </div>
+        </div>
+
+        <div className={`bg-slate-50 rounded-2xl p-8 border border-slate-200 sticky top-24 ${previewMode ? 'flex' : 'hidden lg:block'}`}>
+           <div className="prose prose-slate max-w-none w-full">
+              <h1 className="font-serif break-words">{formData.title || "Untitled Story"}</h1>
+              {formData.coverImage && (
+                <div className="w-full h-64 rounded-xl overflow-hidden mb-8 bg-slate-200">
+                  <img src={formData.coverImage} alt="Cover" className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="font-serif text-slate-700" style={{ whiteSpace: 'pre-wrap' }}>
+                {formData.content || "*Start writing to see preview...*"}
+              </div>
            </div>
         </div>
       </div>
