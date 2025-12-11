@@ -7,7 +7,7 @@
 # Headers
 [[headers]]
   for = "/*"
-  [headers]
+  [headers.values]
     # Set a default caching policy for all assets
     # Cache for 1 year, and stale-while-revalidate for 1 day
     # This is a good default for assets that are fingerprinted
