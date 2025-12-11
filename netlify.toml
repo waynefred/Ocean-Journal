@@ -1,16 +1,36 @@
-
 # Netlify configuration file
 
 [build]
-  # This is the command Netlify will run to build your site.
   command = "npm run build"
-  
-  # This is the directory that contains the built site.
   publish = "dist"
 
+# Production context headers
+[context.production.headers]
+  # Set a default caching policy for all assets
+  # Cache for 1 year, and stale-while-revalidate for 1 day
+  # This is a good default for assets that are fingerprinted
+  cache-control = "public, max-age=31536000, s-maxage=31536000, stale-while-revalidate=86400"
+  
+  # Security headers to prevent clickjacking, cross-site scripting, etc.
+  X-Frame-Options = "DENY"
+  X-XSS-Protection = "1; mode=block"
+  X-Content-Type-Options = "nosniff"
+  Referrer-Policy = "strict-origin-when-cross-origin"
+  
+  # Content Security Policy (CSP)
+  # This is a restrictive policy that can be loosened as needed.
+  # It allows scripts and styles from self and Google Fonts.
+  # It allows images from self, data:, and unsplash.com.
+  Content-Security-Policy = """
+    default-src 'self'; 
+    script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; 
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; 
+    font-src 'self' https://fonts.gstatic.com; 
+    img-src 'self' data: https://images.unsplash.com; 
+    connect-src 'self' https://*.supabase.co;
+  """
+
 [[redirects]]
-  # This rule is for single-page applications (SPAs).
-  # It redirects all paths to the root index.html file.
   from = "/*"
   to = "/index.html"
   status = 200
