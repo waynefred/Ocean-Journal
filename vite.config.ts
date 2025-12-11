@@ -9,10 +9,13 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      // CRITICAL FIX: Defines the Netlify variable (GEMINI_API_KEY) as the app's expected variable (API_KEY).
+      // Expose Netlify environment variables to the client-side code.
+      // This is crucial for the live site to connect to Supabase and other services.
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || ''),
-      // Prevent 'process is not defined' errors
-      'process.env': {}, 
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL || ''),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY || ''),
+      // Prevent 'process is not defined' errors for other cases
+      'process.env': {},
     },
     base: '/',
     build: {
