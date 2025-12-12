@@ -1,29 +1,24 @@
+// types.ts
+
 export interface Article {
-  id: string;
+  id: number;
+  created_at: string;
   title: string;
-  excerpt: string;
-  content: string; // Markdown
-  coverImage: string;
-  tags: string[];
-  status: 'published' | 'draft';
-  likes: number;
-  likedBy: string[]; // Array of userIdentifier
-  createdAt: number;
-  updatedAt: number;
+  content: string;
+  author: string;
+  cover_image_url?: string;
+  excerpt?: string;
+  status: 'draft' | 'published';
+  tags?: string[];
 }
 
 export interface Comment {
-  id: string;
-  articleId: string;
-  commenterName: string;
-  commenterEmail: string; // Kept private usually, but stored
+  id: number;
+  created_at: string;
+  article_id: number;
+  author: string;
   content: string;
-  createdAt: number;
 }
 
-export interface UserSession {
-  isAdmin: boolean;
-  userId: string; // Unique ID for liking logic
-}
-
-export type ArticleFormData = Omit<Article, 'id' | 'likes' | 'likedBy' | 'createdAt' | 'updatedAt'>;
+// This type is for the form data when creating/editing an article
+export type ArticleFormData = Omit<Article, 'id' | 'created_at'>;

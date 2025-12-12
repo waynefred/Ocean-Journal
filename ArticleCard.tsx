@@ -1,55 +1,39 @@
+// ArticleCard.tsx
+
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Calendar } from 'lucide-react';
-import { Article } from './types';
 import { motion } from 'framer-motion';
+import { Article } from './types';
+import { Eye } from 'lucide-react';
 
-interface Props {
+interface ArticleCardProps {
   article: Article;
-  index: number;
 }
 
-const ArticleCard: React.FC<Props> = ({ article, index }) => {
+const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 flex flex-col h-full"
+      transition={{ duration: 0.5 }}
+      className="bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-cyan-500/50 transition-shadow duration-300"
     >
-      <Link to={`/article/${article.id}`} className="block overflow-hidden h-48 sm:h-56">
-        <img 
-          src={article.coverImage} 
-          alt={article.title} 
-          className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-700 ease-out"
-        />
-        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-semibold text-ocean-700 shadow-sm">
-          {article.tags[0]}
-        </div>
-      </Link>
-      
-      <div className="p-6 flex-1 flex flex-col">
-        <Link to={`/article/${article.id}`}>
-          <h3 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-ocean-600 transition-colors font-serif leading-tight">
-            {article.title}
-          </h3>
-        </Link>
-        
-        <p className="text-slate-600 text-sm leading-relaxed mb-4 flex-1 line-clamp-3">
-          {article.excerpt}
-        </p>
-        
-        <div className="flex items-center justify-between pt-4 border-t border-slate-50 mt-auto">
-          <div className="flex items-center gap-1 text-slate-400 group-hover:text-pink-500 transition-colors">
-            <Heart className="w-4 h-4" />
-            <span className="text-xs font-medium">{article.likes}</span>
-          </div>
-          <Link 
-            to={`/article/${article.id}`} 
-            className="text-sm font-semibold text-ocean-600 hover:text-ocean-800 transition-colors"
-          >
-            Read Story &rarr;
-          </Link>
+      <img
+        src={article.cover_image_url || 'https://images.unsplash.com/photo-1472905391583-939a8c9e033b?q=80&w=2938&auto=format&fit=crop'}
+        alt={article.title}
+        className="w-full h-48 object-cover"
+      />
+      <div className="p-6">
+        <h2 className="text-2xl font-bold mb-2 text-cyan-400">{article.title}</h2>
+        <p className="text-gray-400 mb-4">{article.excerpt || `${article.content.substring(0, 100)}...`}</p>
+        <div className="flex justify-between items-center">
+            <Link
+            to={`/article/${article.id}`}
+            className="inline-flex items-center text-cyan-400 hover:text-cyan-300 transition-colors duration-300"
+            >
+                <Eye className="mr-2 h-5 w-5" />
+                Read More
+            </Link>
         </div>
       </div>
     </motion.div>

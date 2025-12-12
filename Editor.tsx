@@ -1,288 +1,219 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+// Editor.tsx
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getArticleById, saveArticle, uploadCoverImage } from './storage';
-import { generateExcerpt } from './gemini';
+import { createArticle, getArticle, updateArticle, uploadCoverImage } from './storage';
 import { ArticleFormData } from './types';
-import { Save, ArrowLeft, Loader2, Image as ImageIcon, Upload, Wand2 } from 'lucide-react';
+import { Save, Upload, Eye } from 'lucide-react';
 
 const Editor: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+    const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+    const [formData, setFormData] = useState<ArticleFormData>({
+        title: '',
+        content: '',
+        author: 'Current User', // Replace with actual user later
+        cover_image_url: '',
+        excerpt: '',
+        status: 'draft',
+        tags: [],
+    });
+    const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-  const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [aiLoading, setAiLoading] = useState<string | null>(null);
+    useEffect(() => {
+        if (id) {
+            const fetchArticle = async () => {
+                try {
+                    const article = await getArticle(parseInt(id, 10));
+                    if (article) {
+                        setFormData({
+                            title: article.title,
+                            content: article.content,
+                            author: article.author,
+                            cover_image_url: article.cover_image_url,
+                            excerpt: article.excerpt,
+                            status: article.status,
+                            tags: article.tags || [],
+                        });
+                    }
+                } catch (err) {
+                    setError('Failed to load article for editing.');
+                    console.error(err);
+                }
+            };
+            fetchArticle();
+        }
+    }, [id]);
 
-  const [formData, setFormData] = useState<ArticleFormData>({
-    title: '',
-    excerpt: '',
-    content: '',
-    coverImage: '',
-    tags: [],
-    status: 'draft',
-  });
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
-  const [tagInput, setTagInput] = useState('');
-  const [previewMode, setPreviewMode] = useState(false);
+    const handleTagsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const tags = e.target.value.split(',').map(tag => tag.trim());
+        setFormData(prev => ({ ...prev, tags }));
+    };
 
-  const fetchArticle = useCallback(async () => {
-    if (!id) {
-      setIsLoading(false);
-      return;
-    }
+    const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setCoverImageFile(e.target.files[0]);
+        }
+    };
 
-    setIsLoading(true);
-    try {
-      const article = await getArticleById(id);
-      if (article) {
-        setFormData({
-          title: article.title || '',
-          excerpt: article.excerpt || '',
-          content: article.content || '',
-          coverImage: article.coverImage || '',
-          tags: article.tags || [],
-          status: article.status || 'draft',
-        });
-      } else {
-        navigate('/admin/manage');
-      }
-    } catch (error) {
-      console.error("Failed to fetch article for editing:", error);
-      navigate('/admin/manage');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [id, navigate]);
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setError(null);
 
-  useEffect(() => {
-    fetchArticle();
-  }, [fetchArticle]);
+        try {
+            let imageUrl = formData.cover_image_url;
+            if (coverImageFile) {
+                const uploadedUrl = await uploadCoverImage(coverImageFile);
+                if (uploadedUrl) {
+                    imageUrl = uploadedUrl;
+                } else {
+                    throw new Error('Failed to upload cover image.');
+                }
+            }
 
-  const handleChange = (field: keyof ArticleFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+            const articleData = { ...formData, cover_image_url: imageUrl };
 
-  const handleAddTag = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
-      e.preventDefault();
-      const currentTags = formData.tags || [];
-      if (!currentTags.includes(tagInput.trim())) {
-        handleChange('tags', [...currentTags, tagInput.trim()]);
-      }
-      setTagInput('');
-    }
-  };
+            if (id) {
+                await updateArticle(parseInt(id, 10), articleData);
+            } else {
+                await createArticle(articleData);
+            }
+            navigate('/dashboard');
+        } catch (err) {
+            setError('Failed to save the article. Please try again.');
+            console.error(err);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-  const removeTag = (tag: string) => {
-    const currentTags = formData.tags || [];
-    handleChange('tags', currentTags.filter(t => t !== tag));
-  };
+    // Memoized preview component to avoid re-renders on every keystroke
+    const MemoizedPreview = useCallback(() => {
+      return (
+        <div className="prose prose-invert max-w-none text-gray-300">
+          {formData.cover_image_url && <img src={formData.cover_image_url} alt="Cover Preview" className="w-full h-64 object-cover rounded-md" />}
+          <h1>{formData.title}</h1>
+          <p className="lead">{formData.excerpt}</p>
+          {formData.content.split('\n').map((p, i) => <p key={i}>{p}</p>)}
+        </div>
+      );
+    }, [formData.title, formData.content, formData.excerpt, formData.cover_image_url]);
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await saveArticle(formData, id);
-      navigate('/admin/manage');
-    } catch (error) {
-      console.error("Failed to save article:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      const publicUrl = await uploadCoverImage(file);
-      handleChange('coverImage', publicUrl);
-    } catch (error) {
-      console.error("Image upload failed:", error);
-      alert("Failed to upload image. Please try again.");
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
-  };
-
-  // AI Helpers
-  const handleAiExcerpt = async () => {
-    if (!formData.content) return;
-    setAiLoading('excerpt');
-    try {
-      const excerpt = await generateExcerpt(formData.content);
-      if (excerpt) handleChange('excerpt', excerpt);
-    } catch (e) {
-      console.error(e);
-      alert("Could not generate excerpt.");
-    } finally {
-      setAiLoading(null);
-    }
-  };
-
-  if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-ocean-500" />
-      </div>
+        <div className="max-w-6xl mx-auto">
+            <h1 className="text-4xl font-bold mb-8 text-cyan-400">{id ? 'Edit Article' : 'Create New Article'}</h1>
+            {error && <p className="text-red-500 bg-red-500/10 p-3 rounded-md mb-4">{error}</p>}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Editor Form */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                        <label htmlFor="title" className="block text-sm font-medium text-gray-400 mb-1">Title</label>
+                        <input
+                            type="text"
+                            id="title"
+                            name="title"
+                            value={formData.title}
+                            onChange={handleChange}
+                            className="w-full bg-gray-700 text-white rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="content" className="block text-sm font-medium text-gray-400 mb-1">Content</label>
+                        <textarea
+                            id="content"
+                            name="content"
+                            value={formData.content}
+                            onChange={handleChange}
+                            rows={15}
+                            className="w-full bg-gray-700 text-white rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="excerpt" className="block text-sm font-medium text-gray-400 mb-1">Excerpt</label>
+                        <textarea
+                            id="excerpt"
+                            name="excerpt"
+                            value={formData.excerpt}
+                            onChange={handleChange}
+                            rows={3}
+                            className="w-full bg-gray-700 text-white rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                            placeholder="A short summary of the article..."
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <label htmlFor="coverImage" className="flex-1 cursor-pointer inline-flex items-center justify-center bg-gray-600 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-500 transition-colors">
+                            <Upload className="mr-2 h-5 w-5" />
+                            {coverImageFile ? 'Change Cover Image' : 'Upload Cover Image'}
+                        </label>
+                        <input id="coverImage" type="file" onChange={handleCoverImageChange} className="hidden" accept="image/*" />
+                        {coverImageFile && <span className="text-sm text-gray-400">{coverImageFile.name}</span>}
+                    </div>
+
+                    <div>
+                        <label htmlFor="tags" className="block text-sm font-medium text-gray-400 mb-1">Tags (comma-separated)</label>
+                        <input
+                            type="text"
+                            id="tags"
+                            name="tags"
+                            value={formData.tags?.join(', ')}
+                            onChange={handleTagsChange}
+                            className="w-full bg-gray-700 text-white rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="status" className="block text-sm font-medium text-gray-400 mb-1">Status</label>
+                        <select
+                            id="status"
+                            name="status"
+                            value={formData.status}
+                            onChange={handleChange}
+                            className="w-full bg-gray-700 text-white rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                        >
+                            <option value="draft">Draft</option>
+                            <option value="published">Published</option>
+                        </select>
+                    </div>
+
+                    <div className="flex justify-end">
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="inline-flex items-center bg-cyan-500 text-white font-bold py-2 px-6 rounded-md hover:bg-cyan-600 transition-colors disabled:bg-gray-500 disabled:cursor-not-allowed"
+                        >
+                            <Save className="mr-2 h-5 w-5" />
+                            {isSubmitting ? 'Saving...' : (id ? 'Update Article' : 'Save Article')}
+                        </button>
+                    </div>
+                </form>
+
+                {/* Live Preview */}
+                <div className="bg-gray-800 p-6 rounded-lg">
+                    <h2 className="text-2xl font-bold mb-4 flex items-center text-gray-400">
+                        <Eye className="mr-2 h-6 w-6" /> Live Preview
+                    </h2>
+                    <div className="border-t border-gray-700 pt-4">
+                       <MemoizedPreview />
+                    </div>
+                </div>
+            </div>
+        </div>
     );
-  }
-
-  const tags = formData.tags || [];
-
-  return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-      <div className="flex items-center justify-between mb-8 sticky top-20 z-40 bg-white/90 backdrop-blur-sm p-4 rounded-xl shadow-sm border border-slate-100">
-        <div className="flex items-center gap-4">
-           <button onClick={() => navigate('/admin/manage')} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
-             <ArrowLeft className="w-5 h-5" />
-           </button>
-           <h1 className="text-2xl font-bold text-slate-800">{id ? 'Edit Story' : 'New Story'}</h1>
-        </div>
-        <div className="flex items-center gap-3">
-           <select 
-             value={formData.status}
-             onChange={e => handleChange('status', e.target.value)}
-             className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-medium focus:ring-2 focus:ring-ocean-100 outline-none"
-           >
-             <option value="draft">Draft</option>
-             <option value="published">Published</option>
-           </select>
-           <button
-             onClick={() => setPreviewMode(!previewMode)}
-             className="lg:hidden px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-           >
-             {previewMode ? 'Edit' : 'Preview'}
-           </button>
-           <button 
-             onClick={handleSave}
-             disabled={isSaving}
-             className="flex items-center gap-2 bg-ocean-600 hover:bg-ocean-700 text-white px-6 py-2 rounded-lg font-medium transition-colors shadow-sm disabled:opacity-70"
-           >
-             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-             Save
-           </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-        <div className={`flex flex-col gap-6 ${previewMode ? 'hidden lg:flex' : 'flex'}`}>
-           <input 
-             type="text" 
-             placeholder="Article Title" 
-             value={formData.title}
-             onChange={e => handleChange('title', e.target.value)}
-             className="text-4xl font-serif font-bold text-slate-900 placeholder-slate-300 border-none outline-none bg-transparent p-2"
-           />
-           
-           <div className="space-y-4">
-              <div className="relative">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Excerpt</label>
-                <textarea 
-                  value={formData.excerpt} 
-                  onChange={e => handleChange('excerpt', e.target.value)}
-                  placeholder="A short summary..."
-                  className="w-full bg-white border border-slate-200 rounded-lg p-3 text-slate-600 focus:border-ocean-400 focus:ring-2 focus:ring-ocean-100 outline-none transition-all resize-none h-24"
-                />
-                 <div className="absolute top-8 right-2 flex gap-1">
-                   <button
-                     onClick={handleAiExcerpt}
-                     disabled={!!aiLoading}
-                     title="Generate Excerpt from Content"
-                     className="p-1.5 bg-ocean-50 text-ocean-600 rounded hover:bg-ocean-100 transition-colors"
-                   >
-                      {aiLoading === 'excerpt' ? <Loader2 className="w-4 h-4 animate-spin"/> : <Wand2 className="w-4 h-4"/>}
-                   </button>
-                </div>
-              </div>
-
-             <div>
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cover Image</label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <ImageIcon className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                    <input
-                      type="text"
-                      value={formData.coverImage}
-                      onChange={e => handleChange('coverImage', e.target.value)}
-                      placeholder="Paste URL or upload image"
-                      className="w-full bg-white border border-slate-200 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:border-ocean-400 focus:ring-2 focus:ring-ocean-100 outline-none"
-                    />
-                  </div>
-                  <button
-                    onClick={() => !isUploading && fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition-colors whitespace-nowrap active:scale-95 disabled:opacity-50 disabled:cursor-wait"
-                    title="Upload from PC"
-                  >
-                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                    <span className="hidden sm:inline">{isUploading ? 'Uploading...' : 'Upload'}</span>
-                  </button>
-                  <input 
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                  />
-                </div>
-                <p className="text-xs text-slate-400 mt-1 ml-1">Supports image URLs or uploads to Supabase Storage.</p>
-             </div>
-
-             <div>
-               <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Tags (Press Enter)</label>
-               <div className="flex flex-wrap gap-2 mb-2 p-2 bg-white border border-slate-200 rounded-lg min-h-[46px]">
-                  {tags.map(tag => (
-                    <span key={tag} className="flex items-center gap-1 bg-ocean-50 text-ocean-700 px-2 py-1 rounded text-sm">
-                      {tag}
-                      <button onClick={() => removeTag(tag)} className="hover:text-ocean-900">&times;</button>
-                    </span>
-                  ))}
-                  <input 
-                    type="text" 
-                    value={tagInput}
-                    onChange={e => setTagInput(e.target.value)}
-                    onKeyDown={handleAddTag}
-                    className="flex-1 bg-transparent outline-none min-w-[100px] text-sm"
-                    placeholder={tags.length === 0 ? "Add tags..." : ""}
-                  />
-               </div>
-             </div>
-           </div>
-
-           <div className="flex-1 flex flex-col">
-              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Content (Markdown supported)</label>
-              <textarea 
-                value={formData.content}
-                onChange={e => handleChange('content', e.target.value)}
-                placeholder="Write your story here..."
-                className="w-full bg-white border border-slate-200 rounded-lg p-6 text-lg font-serif text-slate-700 focus:border-ocean-400 focus:ring-2 focus:ring-ocean-100 outline-none transition-all leading-relaxed min-h-[600px]"
-              />
-           </div>
-        </div>
-
-        <div className={`bg-slate-50 rounded-2xl p-8 border border-slate-200 sticky top-24 ${previewMode ? 'flex' : 'hidden lg:block'}`}>
-           <div className="prose prose-slate max-w-none w-full">
-              <h1 className="font-serif break-words">{formData.title || "Untitled Story"}</h1>
-              {formData.coverImage && (
-                <div className="w-full h-64 rounded-xl overflow-hidden mb-8 bg-slate-200">
-                  <img src={formData.coverImage} alt="Cover" className="w-full h-full object-cover" />
-                </div>
-              )}
-              <div className="font-serif text-slate-700" style={{ whiteSpace: 'pre-wrap' }}>
-                {formData.content || "*Start writing to see preview...*"}
-              </div>
-           </div>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 export default Editor;
